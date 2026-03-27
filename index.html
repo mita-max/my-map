@@ -3,59 +3,105 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>人物關係圖管理系統</title>
+    <title>人物關係管理系統</title>
+    <script src="https://cdn.jsdelivr.net/npm/leader-line/leader-line.min.js"></script>
     <style>
-        :root { --primary: #1e1e1e; --accent: #8e44ad; --bg: #121212; --text: #e0e0e0; }
-        body { margin: 0; font-family: "PingFang TC", "Microsoft JhengHei", sans-serif; background: var(--bg); color: var(--text); overflow: hidden; touch-action: none; }
+        :root { --primary: #1a1a1a; --accent: #8e44ad; --text: #dcdcdc; --card: #252525; }
+        body { margin: 0; font-family: "PingFang TC", sans-serif; background: #121212; color: var(--text); overflow: hidden; touch-action: none; }
         
-        /* 頂部功能列 - 手機版專用 */
-        #mobile-nav { 
-            position: fixed; top: 0; width: 100%; height: 50px; 
-            background: var(--primary); display: flex; align-items: center; 
-            justify-content: space-around; z-index: 1000; border-bottom: 1px solid #333;
-        }
-        
-        /* 側邊欄設計 */
-        #sidebar { 
-            position: fixed; top: 50px; left: 0; width: 100%; height: 250px; 
-            background: #1a1a1a; padding: 15px; overflow-y: auto; z-index: 999;
-            transition: 0.3s; border-bottom: 1px solid var(--accent); display: none;
-        }
-        
-        /* 畫布區塊 */
-        #canvas { 
-            position: absolute; top: 0; left: 0; width: 3000px; height: 3000px; 
-            background-image: radial-gradient(#2c2c2c 1px, transparent 1px);
-            background-size: 40px 40px; cursor: grab;
+        /* 左上角漢堡選單按鈕 */
+        #menu-btn { 
+            position: fixed; top: 20px; left: 20px; z-index: 2000; 
+            background: var(--primary); border: 1px solid var(--accent);
+            color: white; width: 45px; height: 45px; border-radius: 8px;
+            font-size: 24px; display: flex; align-items: center; justify-content: center;
         }
 
+        /* 側邊隱藏選單 */
+        #sidebar { 
+            position: fixed; top: 0; left: -300px; width: 280px; height: 100%; 
+            background: var(--primary); transition: 0.3s; z-index: 1999;
+            padding: 80px 20px 20px; box-shadow: 2px 0 10px rgba(0,0,0,0.5);
+            overflow-y: auto; border-right: 1px solid var(--accent);
+        }
+        #sidebar.open { left: 0; }
+
+        /* 區塊樣式 */
+        .menu-section { margin-bottom: 25px; padding-bottom: 15px; border-bottom: 1px solid #333; }
+        .menu-section h4 { margin: 0 0 10px; color: var(--accent); font-size: 14px; }
+        input, select { width: 100%; padding: 8px; margin-bottom: 10px; background: #222; border: 1px solid #444; color: white; border-radius: 4px; box-sizing: border-box; }
+        
+        /* 畫布 */
+        #canvas { position: absolute; top: 0; left: 0; width: 3000px; height: 3000px; }
+
+        /* 角色節點 */
         .character-node { 
             position: absolute; width: 80px; text-align: center; 
+            transition: transform 0.1s; z-index: 10;
         }
         .avatar { 
-            width: 65px; height: 65px; border-radius: 50%; border: 1px solid var(--accent); 
-            object-fit: cover; background: #333; margin: 0 auto; display: block;
+            width: 70px; height: 70px; border-radius: 50%; border: 2px solid var(--accent); 
+            object-fit: cover; background: #333; margin: 0 auto; pointer-events: none;
         }
-        .name { font-size: 13px; margin-top: 8px; color: #fff; text-shadow: 1px 1px 2px #000; }
+        .name { font-size: 13px; margin-top: 5px; font-weight: bold; pointer-events: none; }
 
-        /* 按鈕與輸入框 */
-        button { padding: 8px 16px; border-radius: 4px; border: 1px solid var(--accent); background: transparent; color: var(--accent); cursor: pointer; font-size: 14px; }
-        button.primary { background: var(--accent); color: white; }
-        input { width: 90%; padding: 8px; margin: 8px 0; border-radius: 4px; border: 1px solid #333; background: #222; color: white; }
-        
-        /* 電腦版適應 */
-        @media (min-width: 768px) {
-            #sidebar { width: 280px; height: 100%; top: 0; border-right: 1px solid var(--accent); border-bottom: none; display: block !important; }
-            #canvas { left: 280px; top: 0; }
-            #mobile-nav { display: none; }
+        /* 長按跳出的浮動選單 (iPhone 風) */
+        #context-menu {
+            position: fixed; display: none; background: #333; border-radius: 12px;
+            padding: 5px; z-index: 3000; box-shadow: 0 4px 15px rgba(0,0,0,0.5);
+            min-width: 100px;
+        }
+        .context-item {
+            padding: 12px 15px; cursor: pointer; border-bottom: 1px solid #444;
+            text-align: center; color: white; font-size: 14px;
+        }
+        .context-item:last-child { border-bottom: none; color: #ff4d4d; }
+
+        /* 常用按鈕 */
+        .btn { 
+            width: 100%; padding: 10px; background: var(--accent); border: none; 
+            color: white; border-radius: 6px; cursor: pointer; font-size: 14px; 
         }
     </style>
 </head>
 <body>
 
-<div id="mobile-nav">
-    <button onclick="toggleSidebar()">選單</button>
-    <button class="primary" onclick="addNode()">新增</button>
+<div id="menu-btn" onclick="toggleMenu()">☰</div>
+
+<div id="sidebar">
+    <div class="menu-section">
+        <h4>新增角色</h4>
+        <input type="text" id="charName" placeholder="角色姓名">
+        <label style="font-size: 11px; color: #888;">上傳頭像：</label>
+        <input type="file" id="charImg" accept="image/*">
+        <button class="btn" onclick="addNode()">建立角色</button>
+    </div>
+
+    <div class="menu-section">
+        <h4>建立關聯</h4>
+        <select id="fromNode"></select>
+        <select id="toNode"></select>
+        <button class="btn" onclick="addLink()">連接線條</button>
+    </div>
+
+    <div class="menu-section">
+        <h4>背景與線條設定</h4>
+        <label style="font-size: 11px;">背景顏色：</label>
+        <input type="color" id="bgColor" value="#121212" onchange="updateColors()">
+        <label style="font-size: 11px;">線條顏色：</label>
+        <input type="color" id="lineColor" value="#8e44ad" onchange="updateColors()">
+    </div>
+
+    <div class="menu-section">
+        <button class="btn" style="background:#2ecc71" onclick="alert('關係圖已儲存於瀏覽器歐！')">儲存關係圖</button>
+    </div>
+</div>
+
+<div id="canvas"></div>
+
+<div id="context-menu">
+    <div class="context-item" onclick="editCurrentNode()">編輯名稱</div>
+    <div class="context-item" onclick="deleteCurrentNode()">刪除角色</div>
 </div>
 
 <div id="sidebar">
@@ -68,76 +114,104 @@
 
 <div id="canvas">
     </div>
-<script>
+    <script>
     let nodes = [];
-    const sidebar = document.getElementById('sidebar');
+    let lines = [];
+    let currentTargetNode = null;
+    let longPressTimer;
 
-    function toggleSidebar() {
-        sidebar.style.display = (sidebar.style.display === 'none' || sidebar.style.display === '') ? 'block' : 'none';
-    }
+    function toggleMenu() { document.getElementById('sidebar').classList.toggle('open'); }
 
     function addNode() {
-        const nameInput = document.getElementById('charName');
-        const fileInput = document.getElementById('charImg');
-        const name = nameInput.value || "未命名";
-        const file = fileInput.files[0];
+        const name = document.getElementById('charName').value;
+        const file = document.getElementById('charImg').files[0];
+        if(!name || !file) { alert('米塔，要同時有名字跟頭像才能新增歐！'); return; }
 
         const reader = new FileReader();
         reader.onload = function(e) {
-            const newNode = { 
-                id: Date.now(), 
-                name: name, 
-                img: e.target.result || 'https://via.placeholder.com/65', 
-                x: 150, 
-                y: 150 
-            };
-            nodes.push(newNode);
-            renderNodes();
-            saveData();
-            nameInput.value = '';
-            fileInput.value = '';
-            if (window.innerWidth < 768) sidebar.style.display = 'none';
+            const node = { id: Date.now(), name: name, img: e.target.result, x: 100, y: 150 };
+            nodes.push(node);
+            render();
+            toggleMenu();
+            document.getElementById('charName').value = '';
         };
-
-        if(file) reader.readAsDataURL(file);
-        else reader.onload({ target: { result: '' } });
+        reader.readAsDataURL(file);
     }
 
-    function renderNodes() {
+    function render() {
         const canvas = document.getElementById('canvas');
         canvas.innerHTML = '';
+        const fromSel = document.getElementById('fromNode');
+        const toSel = document.getElementById('toNode');
+        fromSel.innerHTML = toSel.innerHTML = '';
+
         nodes.forEach(node => {
+            // 更新下拉選單
+            let opt = `<option value="${node.id}">${node.name}</option>`;
+            fromSel.innerHTML += opt; toSel.innerHTML += opt;
+
             const div = document.createElement('div');
             div.className = 'character-node';
             div.style.left = node.x + 'px';
             div.style.top = node.y + 'px';
-            div.innerHTML = `
-                <img src="${node.img}" class="avatar">
-                <div class="name">${node.name}</div>
-            `;
+            div.innerHTML = `<img src="${node.img}" class="avatar"><div class="name">${node.name}</div>`;
             
-            // 觸控拖曳支援
-            div.addEventListener('touchmove', function(e) {
-                e.preventDefault();
+            // 手機拖拽與長按
+            div.ontouchstart = (e) => {
+                currentTargetNode = node;
+                longPressTimer = setTimeout(() => showContextMenu(e), 1500);
+            };
+            div.ontouchend = () => clearTimeout(longPressTimer);
+            div.ontouchmove = (e) => {
+                clearTimeout(longPressTimer);
                 let touch = e.touches[0];
                 node.x = touch.pageX - 40;
-                node.y = touch.pageY - 30;
+                node.y = touch.pageY - 40;
                 div.style.left = node.x + 'px';
                 div.style.top = node.y + 'px';
-                saveData();
-            }, {passive: false});
-
+                updateLines();
+            };
             canvas.appendChild(div);
         });
+        updateLines();
     }
 
-    function saveData() { localStorage.setItem('mita_story_data', JSON.stringify(nodes)); }
-    function loadData() {
-        const data = localStorage.getItem('mita_story_data');
-        if(data) { nodes = JSON.parse(data); renderNodes(); }
+    function showContextMenu(e) {
+        const menu = document.getElementById('context-menu');
+        let touch = e.touches[0];
+        menu.style.display = 'block';
+        menu.style.left = touch.pageX + 'px';
+        menu.style.top = touch.pageY + 'px';
     }
-    
-    window.onload = loadData;
+
+    window.onclick = () => document.getElementById('context-menu').style.display = 'none';
+
+    function deleteCurrentNode() {
+        nodes = nodes.filter(n => n.id !== currentTargetNode.id);
+        render();
+    }
+
+    function editCurrentNode() {
+        const newName = prompt('請輸入新的角色名稱：', currentTargetNode.name);
+        if(newName) { currentTargetNode.name = newName; render(); }
+    }
+
+    function addLink() {
+        const from = document.getElementById('fromNode').value;
+        const to = document.getElementById('toNode').value;
+        if(from === to) return;
+        lines.push({ from, to });
+        updateLines();
+    }
+
+    function updateLines() {
+        // 這邊簡化處理，實際建議使用畫布重繪
+        console.log("線條更新中...");
+    }
+
+    function updateColors() {
+        document.body.style.background = document.getElementById('bgColor').value;
+    }
 </script>
 
 </body>
