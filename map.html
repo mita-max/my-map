@@ -1,0 +1,144 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>人物關係圖管理系統</title>
+    <style>
+        :root { --primary: #1e1e1e; --accent: #8e44ad; --bg: #121212; --text: #e0e0e0; }
+        body { margin: 0; font-family: "PingFang TC", "Microsoft JhengHei", sans-serif; background: var(--bg); color: var(--text); overflow: hidden; touch-action: none; }
+        
+        /* 頂部功能列 - 手機版專用 */
+        #mobile-nav { 
+            position: fixed; top: 0; width: 100%; height: 50px; 
+            background: var(--primary); display: flex; align-items: center; 
+            justify-content: space-around; z-index: 1000; border-bottom: 1px solid #333;
+        }
+        
+        /* 側邊欄設計 */
+        #sidebar { 
+            position: fixed; top: 50px; left: 0; width: 100%; height: 250px; 
+            background: #1a1a1a; padding: 15px; overflow-y: auto; z-index: 999;
+            transition: 0.3s; border-bottom: 1px solid var(--accent); display: none;
+        }
+        
+        /* 畫布區塊 */
+        #canvas { 
+            position: absolute; top: 0; left: 0; width: 3000px; height: 3000px; 
+            background-image: radial-gradient(#2c2c2c 1px, transparent 1px);
+            background-size: 40px 40px; cursor: grab;
+        }
+
+        .character-node { 
+            position: absolute; width: 80px; text-align: center; 
+        }
+        .avatar { 
+            width: 65px; height: 65px; border-radius: 50%; border: 1px solid var(--accent); 
+            object-fit: cover; background: #333; margin: 0 auto; display: block;
+        }
+        .name { font-size: 13px; margin-top: 8px; color: #fff; text-shadow: 1px 1px 2px #000; }
+
+        /* 按鈕與輸入框 */
+        button { padding: 8px 16px; border-radius: 4px; border: 1px solid var(--accent); background: transparent; color: var(--accent); cursor: pointer; font-size: 14px; }
+        button.primary { background: var(--accent); color: white; }
+        input { width: 90%; padding: 8px; margin: 8px 0; border-radius: 4px; border: 1px solid #333; background: #222; color: white; }
+        
+        /* 電腦版適應 */
+        @media (min-width: 768px) {
+            #sidebar { width: 280px; height: 100%; top: 0; border-right: 1px solid var(--accent); border-bottom: none; display: block !important; }
+            #canvas { left: 280px; top: 0; }
+            #mobile-nav { display: none; }
+        }
+    </style>
+</head>
+<body>
+
+<div id="mobile-nav">
+    <button onclick="toggleSidebar()">選單</button>
+    <button class="primary" onclick="addNode()">新增</button>
+</div>
+
+<div id="sidebar">
+    <h3 style="margin-top: 0;">角色管理</h3>
+    <input type="text" id="charName" placeholder="輸入角色姓名">
+    <label style="font-size: 12px; color: #888;">上傳頭像：</label>
+    <input type="file" id="charImg" accept="image/*">
+    <div id="charList" style="margin-top: 20px;"></div>
+</div>
+
+<div id="canvas">
+    </div>
+<script>
+    let nodes = [];
+    const sidebar = document.getElementById('sidebar');
+
+    function toggleSidebar() {
+        sidebar.style.display = (sidebar.style.display === 'none' || sidebar.style.display === '') ? 'block' : 'none';
+    }
+
+    function addNode() {
+        const nameInput = document.getElementById('charName');
+        const fileInput = document.getElementById('charImg');
+        const name = nameInput.value || "未命名";
+        const file = fileInput.files[0];
+
+        const reader = new FileReader();
+        reader.onload = function(e) {
+            const newNode = { 
+                id: Date.now(), 
+                name: name, 
+                img: e.target.result || 'https://via.placeholder.com/65', 
+                x: 150, 
+                y: 150 
+            };
+            nodes.push(newNode);
+            renderNodes();
+            saveData();
+            nameInput.value = '';
+            fileInput.value = '';
+            if (window.innerWidth < 768) sidebar.style.display = 'none';
+        };
+
+        if(file) reader.readAsDataURL(file);
+        else reader.onload({ target: { result: '' } });
+    }
+
+    function renderNodes() {
+        const canvas = document.getElementById('canvas');
+        canvas.innerHTML = '';
+        nodes.forEach(node => {
+            const div = document.createElement('div');
+            div.className = 'character-node';
+            div.style.left = node.x + 'px';
+            div.style.top = node.y + 'px';
+            div.innerHTML = `
+                <img src="${node.img}" class="avatar">
+                <div class="name">${node.name}</div>
+            `;
+            
+            // 觸控拖曳支援
+            div.addEventListener('touchmove', function(e) {
+                e.preventDefault();
+                let touch = e.touches[0];
+                node.x = touch.pageX - 40;
+                node.y = touch.pageY - 30;
+                div.style.left = node.x + 'px';
+                div.style.top = node.y + 'px';
+                saveData();
+            }, {passive: false});
+
+            canvas.appendChild(div);
+        });
+    }
+
+    function saveData() { localStorage.setItem('mita_story_data', JSON.stringify(nodes)); }
+    function loadData() {
+        const data = localStorage.getItem('mita_story_data');
+        if(data) { nodes = JSON.parse(data); renderNodes(); }
+    }
+    
+    window.onload = loadData;
+</script>
+
+</body>
+</html>
